@@ -1,0 +1,844 @@
+"""
+Generates an interactive, standalone HTML presentation deck for the Hallucination Detection study.
+Features:
+- Fullscreen mode (Press F)
+- Keyboard navigation (Arrow keys, Spacebar)
+- Speaker notes toggle (Press S or N)
+- Jump to slide dropdown
+- Beautiful dark & light slide themes
+- Responsive typography and data tables
+"""
+
+html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hallucination Detection in LLMs — Presentation Deck</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-light: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --accent-green: #10b981;
+      --accent-red: #e11d48;
+      --accent-amber: #d97706;
+      --accent-purple: #7c3aed;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #020617;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Deck container */
+    #deck {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1200px;
+      height: 675px; /* 16:9 Aspect Ratio */
+      background: var(--bg-light);
+      border-radius: 16px;
+      padding: 45px 55px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+      overflow-y: auto;
+      position: relative;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .slide.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slide.dark-theme {
+      background: var(--bg-dark);
+      color: #f8fafc;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.985); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Headers */
+    .category-badge {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--primary);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .slide-title {
+      font-size: 1.95rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 25px;
+      line-height: 1.25;
+    }
+
+    .slide.dark-theme .slide-title {
+      color: #ffffff;
+    }
+
+    /* Content Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      flex: 1;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      flex: 1;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slide.dark-theme .card {
+      background: #1e293b;
+      border-color: #334155;
+      color: #e2e8f0;
+    }
+
+    .card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .card li {
+      font-size: 0.95rem;
+      line-height: 1.55;
+      margin-bottom: 10px;
+      color: #334155;
+      position: relative;
+      padding-left: 18px;
+    }
+
+    .slide.dark-theme .card li {
+      color: #cbd5e1;
+    }
+
+    .card li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    /* KPI Highlights */
+    .kpi-container {
+      background: var(--bg-dark);
+      color: white;
+      border-radius: 12px;
+      padding: 25px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .kpi-num {
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: var(--accent-green);
+      line-height: 1;
+      margin: 10px 0;
+    }
+
+    .kpi-label {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 20px 0;
+      font-size: 0.95rem;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    th {
+      background: var(--bg-dark);
+      color: white;
+      padding: 12px 16px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      color: #1e293b;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Speaker Notes Banner */
+    .speaker-notes {
+      display: none;
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      color: #92400e;
+      margin-top: 15px;
+      line-height: 1.45;
+    }
+
+    .speaker-notes strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #78350f;
+    }
+
+    /* Navigation Bar */
+    #nav {
+      height: 60px;
+      background: #0f172a;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+      color: #94a3b8;
+      font-size: 0.9rem;
+    }
+
+    .nav-btn {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .shortcuts-hint {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="deck">
+
+    <!-- SLIDE 1: Title -->
+    <div class="slide active dark-theme" data-notes="Welcome everyone. Today my co-author Prachi Chauhan and I, Aditi Verma from Manipal University Jaipur, are presenting our research on hallucination detection in LLMs. We conduct an empirical comparison on HaluEval using a leakage-resistant experimental split.">
+      <div class="category-badge">IEEE Conference Presentation • AI & NLP Research</div>
+      <h1 class="slide-title" style="font-size: 2.5rem; margin-top: 20px;">Hallucination Detection in Large Language Models</h1>
+      <p style="font-size: 1.25rem; color: #94a3b8; margin-bottom: 35px;">A Review of Techniques, Leakage-Resistant Benchmarking, and Operational Trade-Offs</p>
+      
+      <div class="card" style="background: #1e293b; border-color: #334155; padding: 25px; margin-top: auto;">
+        <h3 style="color: var(--primary);">Authors & Affiliation</h3>
+        <p style="font-size: 1.1rem; font-weight: 600; color: white; margin-bottom: 6px;">Prachi Chauhan &nbsp;•&nbsp; Aditi Verma</p>
+        <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 12px;">Department of Computer Science and Engineering | Manipal University Jaipur</p>
+        <p style="color: #64748b; font-size: 0.85rem;">Contact: prachi.23fe10cii00015@muj.manipal.edu &nbsp;|&nbsp; aditi.23fe10cii00093@muj.manipal.edu</p>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 2: The Problem -->
+    <div class="slide" data-notes="Why is this project so critical? LLMs predict tokens autoregressively based on probability, not truth. They generate plausible-sounding text with complete confidence, creating high risks in healthcare, legal analysis, and enterprise search.">
+      <div class="category-badge">Motivation & Background</div>
+      <h2 class="slide-title">The Hallucination Dilemma in Generative AI</h2>
+      <div class="grid-3">
+        <div class="card">
+          <h3 style="color: var(--accent-amber);">The Fluency Trap</h3>
+          <ul>
+            <li>LLMs output grammatically flawless and authoritative responses.</li>
+            <li>Fluency creates a psychological illusion of factual reliability.</li>
+            <li>Standard decoding maximizes token likelihood, not ground truth.</li>
+            <li>Users cannot intuitively distinguish between real and fake facts.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-red);">High Real-World Stakes</h3>
+          <ul>
+            <li><strong>Medical Diagnosis:</strong> Fabricating non-existent drug interactions.</li>
+            <li><strong>Legal Practice:</strong> Inventing fictitious court case citations.</li>
+            <li><strong>Finance & News:</strong> Misquoting company revenues and historical events.</li>
+            <li><strong>Enterprise RAG:</strong> Directly contradicting uploaded PDFs.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--primary);">The Detection Challenge</h3>
+          <ul>
+            <li>Detectors must flag errors at runtime without known ground truth.</li>
+            <li>Lexical word-matching fails on semantically valid paraphrases.</li>
+            <li>Deep transformers are computationally heavy and uncalibrated.</li>
+            <li><strong>The Core Trade-off:</strong> Catching falsehoods vs. wrongly blocking valid answers.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 3: Conceptual Nuance -->
+    <div class="slide" data-notes="A critical conceptual point from our paper: factual falsity is not identical to lack of support. If an LLM states a fact not mentioned in the provided text, it is ungrounded. In evidence-based QA, ungrounded claims are treated as hallucination risks.">
+      <div class="category-badge">Core Terminology & Definitions</div>
+      <h2 class="slide-title">Direct Contradiction vs. Unsupported Claims</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="color: var(--accent-red);">Type A: Factually Contradicted (Direct Conflict)</h3>
+          <ul>
+            <li><strong>Definition:</strong> The statement directly clashes with explicit evidence in the reference context.</li>
+            <li><strong>Evidence:</strong> <em>"Water boils at 100°C at standard sea-level atmospheric pressure."</em></li>
+            <li><strong>LLM Output:</strong> <em>"Water boils at 50°C under normal sea-level conditions."</em></li>
+            <li><strong>NLI Output Class:</strong> <code>CONTRADICTION</code> (Logit 0).</li>
+            <li><strong>Detection Ease:</strong> Relatively straightforward for cross-attention mechanisms to spot.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-amber);">Type B: Unsupported Claims (Extrapolation)</h3>
+          <ul>
+            <li><strong>Definition:</strong> The statement may or may not be true in reality, but cannot be substantiated by the passage.</li>
+            <li><strong>Evidence:</strong> <em>"Arthur's Magazine was an American literary periodical published in Philadelphia."</em></li>
+            <li><strong>LLM Output:</strong> <em>"Arthur's Magazine was the most popular magazine in Pennsylvania history."</em></li>
+            <li><strong>NLI Output Class:</strong> <code>NEUTRAL</code> (Logit 2).</li>
+            <li><strong>Detection Rule:</strong> In grounded RAG, unverified neutral statements must be treated as hallucination risk.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 4: Taxonomy -->
+    <div class="slide" data-notes="Section III of our research paper categorizes all current hallucination detection techniques into 6 families. In our empirical study, we implement Family 1 as our baseline and Family 2 as our semantic detector.">
+      <div class="category-badge">Literature Taxonomy (Section III)</div>
+      <h2 class="slide-title">Taxonomy of Detection Techniques</h2>
+      <div class="grid-3" style="grid-template-rows: 1fr 1fr;">
+        <div class="card">
+          <h3 style="color: var(--primary);">1. Lexical Classifiers</h3>
+          <p style="font-size: 0.9rem; color: #475569;">TF-IDF, n-grams, and word frequencies with logistic regression. Fast and lightweight, but surface-level.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-purple);">2. Natural Language Inference</h3>
+          <p style="font-size: 0.9rem; color: #475569;">Cross-encoders modeling premise-hypothesis entailment. Directly evaluates factual support.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-green);">3. External Retrieval</h3>
+          <p style="font-size: 0.9rem; color: #475569;">Queries Google or vector databases to retrieve evidence before validating generated statements.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-amber);">4. SelfCheckGPT</h3>
+          <p style="font-size: 0.9rem; color: #475569;">Samples multiple responses at temp > 0. High semantic disagreement between runs signals hallucination.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-red);">5. Predictive Uncertainty</h3>
+          <p style="font-size: 0.9rem; color: #475569;">Analyzes internal LLM token entropy and logits. Low confidence spikes flag hallucinations.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--primary);">6. Claim Decomposition</h3>
+          <p style="font-size: 0.9rem; color: #475569;">Splits long text into atomic single-fact claims and verifies each fact independently.</p>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 5: Benchmark & Splitting -->
+    <div class="slide" data-notes="A vital contribution of our work is eliminating data leakage. In paired benchmarks like HaluEval, random splitting puts the right answer in train and the fake answer in test. We split by unique question ID before generating pairs.">
+      <div class="category-badge">Experimental Setup & Methodology</div>
+      <h2 class="slide-title">HaluEval Benchmark & Leakage-Resistant Split</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="color: var(--primary);">The HaluEval QA Benchmark</h3>
+          <ul>
+            <li><strong>Dataset:</strong> <code>pminervini/HaluEval</code> ('qa' config, 'data' split).</li>
+            <li><strong>Volume:</strong> 10,000 raw HotpotQA Wikipedia records.</li>
+            <li><strong>Paired Answers:</strong> Each question contains:
+              <br>• Ground truth <code>right_answer</code> (Label 0: Supported)
+              <br>• ChatGPT-generated <code>hallucinated_answer</code> (Label 1)
+            </li>
+            <li><strong>Expansion:</strong> Yields 20,000 balanced binary examples.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-green);">Leakage-Resistant Partitioning</h3>
+          <ul>
+            <li><strong>The Flaw:</strong> Shuffling after answer expansion leaks question entities across splits, allowing models to memorize topics.</li>
+            <li><strong>Our Solution:</strong> Split unique questions BEFORE answer creation:
+              <br>• <strong>Train:</strong> 7,000 questions (14,000 answers)
+              <br>• <strong>Validation:</strong> 1,000 questions (2,000 answers)
+              <br>• <strong>Held-out Test:</strong> 2,000 questions (4,000 answers)
+            </li>
+            <li><strong>Verification:</strong> Assertion confirms 0 overlapping question IDs.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 6: Detection Models -->
+    <div class="slide" data-notes="We evaluate two distinct models. Model A is a TF-IDF baseline with 50,000 features and sublinear TF scaling. Model B is a DeBERTa-v3 cross-encoder where premise is the knowledge and hypothesis is the candidate answer.">
+      <div class="category-badge">Detection Architectures</div>
+      <h2 class="slide-title">Model Specifications: Lexical vs. Semantic</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="color: var(--primary);">Model A: TF-IDF + Logistic Regression</h3>
+          <ul>
+            <li><strong>N-Gram Range:</strong> Unigrams + Bigrams (1, 2) to capture named entities.</li>
+            <li><strong>Vocabulary Cap:</strong> 50,000 max features.</li>
+            <li><strong>Sublinear TF:</strong> Applies <code>1 + log(tf)</code> to prevent frequent words from dominating.</li>
+            <li><strong>Classifier:</strong> Logistic Regression, <code>max_iter=1000</code>, balanced weights.</li>
+            <li><strong>Input:</strong> Composite: Knowledge + Question + Candidate Answer.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-purple);">Model B: DeBERTa-v3 NLI Cross-Encoder</h3>
+          <ul>
+            <li><strong>Model:</strong> <code>cross-encoder/nli-deberta-v3-small</code> (SNLI & MultiNLI).</li>
+            <li><strong>Premise:</strong> Reference Knowledge context.</li>
+            <li><strong>Hypothesis:</strong> Candidate Answer alone (isolates the factual claim from question phrasing).</li>
+            <li><strong>Cross-Attention:</strong> Full joint self-attention across premise and hypothesis.</li>
+            <li><strong>Rule 1 (Argmax):</strong> Entailment → 0; Contradiction & Neutral → 1 (Risk).</li>
+          </ul>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 7: 4k Test Results -->
+    <div class="slide" data-notes="Here are the results for our lexical baseline on the full 4,000 held-out test partition. It achieves 70.57% accuracy. However, notice recall on hallucinations is only 59%—meaning it misses 41% of hallucinations.">
+      <div class="category-badge">Section V-A • Empirical Results</div>
+      <h2 class="slide-title">TF-IDF Baseline on 4,000 Held-Out Answers</h2>
+      <div class="grid-2">
+        <div class="kpi-container">
+          <div class="kpi-label">Held-Out Test Accuracy</div>
+          <div class="kpi-num">70.57%</div>
+          <p style="color: #cbd5e1; font-size: 0.95rem; margin-top: 10px;">4,000 test answers (2,000 supported, 2,000 fake)</p>
+          <p style="color: var(--accent-green); font-size: 0.95rem; margin-top: 15px; font-weight: 700;">95% Bootstrap CI: [69.15%, 72.00%]<br>Margin: ±1.42%</p>
+        </div>
+        <div class="card">
+          <h3>Per-Class Performance Breakdown</h3>
+          <ul>
+            <li><strong>Supported Answers (0):</strong> Precision: 0.67 | Recall: 0.82 | F1: 0.74</li>
+            <li><strong>Hallucinations (1):</strong> Precision: 0.77 | Recall: 0.59 | F1: 0.67</li>
+            <li><strong>Confusion Matrix (4,000 samples):</strong>
+              <br>• True Negatives (Supported kept): 1,643
+              <br>• False Positives (Supported flagged): 357
+              <br>• False Negatives (Hallucinations missed): <strong>820 (41% missed!)</strong>
+              <br>• True Positives (Hallucinations caught): 1,180
+            </li>
+            <li><strong>Key Takeaway:</strong> Baseline is decent overall, but dangerous in high-safety settings due to 41% missed hallucinations.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 8: Table I Comparison -->
+    <div class="slide" data-notes="This table from Section V-B compares both models on the identical 300-example sample. TF-IDF wins on accuracy (69% vs 45%), but NLI wins on safety recall (77% vs 57%). NLI catches 20% more hallucinations!">
+      <div class="category-badge">Section V-B • Head-to-Head Comparison</div>
+      <h2 class="slide-title">Table I: TF-IDF vs. NLI on 300 Comparison Examples</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Evaluation Metric</th>
+            <th>TF-IDF Baseline</th>
+            <th>NLI Detector (Argmax)</th>
+            <th>Winner & Operational Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Accuracy</strong></td>
+            <td><strong>69.33%</strong></td>
+            <td>45.33%</td>
+            <td>TF-IDF achieves higher overall accuracy</td>
+          </tr>
+          <tr>
+            <td><strong>Precision (Hallucinations)</strong></td>
+            <td><strong>75.89%</strong></td>
+            <td>47.15%</td>
+            <td>TF-IDF generates far fewer false alarms</td>
+          </tr>
+          <tr>
+            <td><strong>Recall (Safety Catch)</strong></td>
+            <td>56.67%</td>
+            <td><strong>77.33% (+20.7%)</strong></td>
+            <td><strong>NLI catches significantly more hallucinations!</strong></td>
+          </tr>
+          <tr>
+            <td><strong>F1-Score</strong></td>
+            <td><strong>64.89%</strong></td>
+            <td>58.59%</td>
+            <td>TF-IDF maintains better overall balance</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="card" style="padding: 15px; margin-top: 10px;">
+        <h3 style="font-size: 1rem; color: var(--primary); margin-bottom: 5px;">Why Did TF-IDF Get Higher Accuracy Than DeBERTa?</h3>
+        <p style="font-size: 0.9rem; color: #475569; line-height: 1.45;">TF-IDF was trained on 14k in-domain HaluEval examples, allowing it to capture ChatGPT's stylistic perturbation artifacts. DeBERTa was used zero-shot; its neutral predictions on short noun-phrase answers were mapped to hallucination risk, depressing accuracy but boosting safety recall.</p>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 9: Threshold Sweep -->
+    <div class="slide" data-notes="In Section V-C, we explored Rule 2: requiring P(entailment) >= tau. We swept thresholds on validation data, selecting tau=0.95. When tested on the 300 sample, recall jumped to 85%, but the false positive rate exploded to 95%.">
+      <div class="category-badge">Section V-C • Entailment Thresholding</div>
+      <h2 class="slide-title">Validation-Tuned Threshold Analysis (Rule 2)</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="color: var(--primary);">Rule 2 Tuning on Validation Split</h3>
+          <ul>
+            <li><strong>Decision Rule:</strong> Supported ONLY if <code>P(entailment) >= tau</code>; otherwise flag as Hallucination Risk.</li>
+            <li><strong>Validation Sweep:</strong> Evaluated <code>tau in [0.50, 0.95]</code> on 2,000 validation answers.</li>
+            <li><strong>Optimal Threshold:</strong> <code>tau* = 0.95</code> achieved highest validation F1 (59.61%).</li>
+            <li><strong>Validation Metrics at 0.95:</strong>
+              <br>• Acc: 44.06% | Prec: 46.65% | Recall: 82.56%
+            </li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-red);">Diagnostic Test on 300 Sample (tau = 0.95)</h3>
+          <ul>
+            <li><strong>Accuracy:</strong> 44.67%</li>
+            <li><strong>Recall (Hallucinations):</strong> <strong>84.67% (Catches 127 / 150 errors)</strong></li>
+            <li><strong>False Positive Rate (FPR):</strong> <strong>95.33%! (Catastrophic penalty)</strong></li>
+            <li><strong>Specificity:</strong> 4.67% (Only 7 of 150 valid answers passed!)</li>
+            <li><strong>Insight:</strong> Extreme thresholding turns the detector into a brick wall that rejects almost everything.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 10: Usability Dilemma -->
+    <div class="slide" data-notes="Look closely at these two confusion matrices. Moving from Rule 1 to Rule 2 raises True Positives from 116 to 127, but drops True Negatives from 20 to just 7. 143 out of 150 supported answers are rejected!">
+      <div class="category-badge">Error Audit • Usability Dilemma</div>
+      <h2 class="slide-title">The Safety vs. Usability Trade-Off</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="color: var(--accent-purple);">Rule 1: Argmax Decision Rule</h3>
+          <ul>
+            <li><strong>True Negatives (Supported Kept):</strong> 20 / 150 (13.3%)</li>
+            <li><strong>False Positives (Supported Rejected):</strong> 130 / 150 (86.7%)</li>
+            <li><strong>False Negatives (Fake Missed):</strong> 34 / 150 (22.7%)</li>
+            <li><strong>True Positives (Fake Caught):</strong> 116 / 150 (77.3%)</li>
+            <li><strong>Takeaway:</strong> Conservative neutral mapping already penalizes valid answers.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-red);">Rule 2: Threshold tau = 0.95</h3>
+          <ul>
+            <li><strong>True Negatives (Supported Kept):</strong> <strong style="color: var(--accent-red);">ONLY 7 / 150 (4.7%)</strong></li>
+            <li><strong>False Positives (Supported Rejected):</strong> <strong style="color: var(--accent-red);">143 / 150 (95.3%!)</strong></li>
+            <li><strong>False Negatives (Fake Missed):</strong> 23 / 150 (15.3%)</li>
+            <li><strong>True Positives (Fake Caught):</strong> 127 / 150 (84.7%)</li>
+            <li><strong>Takeaway:</strong> Stopping 11 extra fake answers costs 13 extra valid answers.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 11: Statistical Rigor -->
+    <div class="slide" data-notes="We ran 2,000 bootstrap iterations to compute 95% confidence intervals. On 300 samples, the error margin is ±5.7%. On 4,000 samples, it drops to ±1.4%. This prevents researchers from making bold claims over minor metric variations.">
+      <div class="category-badge">Statistical Analysis (B = 2,000 Iterations)</div>
+      <h2 class="slide-title">Bootstrap 95% Confidence Intervals</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Model & Configuration</th>
+            <th>Sample Size</th>
+            <th>Observed Accuracy</th>
+            <th>95% Bootstrap CI</th>
+            <th>Margin of Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>TF-IDF Baseline (Held-out Test)</strong></td>
+            <td>4,000</td>
+            <td>70.57%</td>
+            <td>[69.15%, 72.00%]</td>
+            <td><strong>±1.42%</strong></td>
+          </tr>
+          <tr>
+            <td><strong>TF-IDF Baseline (300 Sample)</strong></td>
+            <td>300</td>
+            <td>69.33%</td>
+            <td>[64.00%, 74.33%]</td>
+            <td>±5.17%</td>
+          </tr>
+          <tr>
+            <td><strong>NLI DeBERTa (Rule 1: Argmax)</strong></td>
+            <td>300</td>
+            <td>45.33%</td>
+            <td>[39.67%, 51.00%]</td>
+            <td>±5.67%</td>
+          </tr>
+          <tr>
+            <td><strong>NLI DeBERTa (Rule 2: tau=0.95)</strong></td>
+            <td>300</td>
+            <td>44.67%</td>
+            <td>[39.00%, 50.33%]</td>
+            <td>±5.67%</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="card" style="padding: 15px;">
+        <h3 style="font-size: 1rem; color: var(--primary); margin-bottom: 5px;">Methodological Significance</h3>
+        <p style="font-size: 0.9rem; color: #475569; line-height: 1.45;">Small benchmark samples (N=300) have wide error bounds. Evaluating on large partitions (N=4,000) is essential to establish genuine architectural superiority rather than random sampling noise.</p>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 12: Limitations -->
+    <div class="slide" data-notes="Honesty about limitations strengthens our research. We candidly note: small 300 comparison sample, synthetic HaluEval perturbations, diagnostic threshold reuse, and short noun-phrase answers causing neutral NLI scores.">
+      <div class="category-badge">Section VII • Study Limitations</div>
+      <h2 class="slide-title">Critical Methodological Limitations</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="color: var(--accent-amber);">1. Small Sample Size (N = 300)</h3>
+          <p style="font-size: 0.9rem; color: #475569; line-height: 1.5;">Head-to-head comparison was restricted to 300 examples due to interactive Colab GPU limits. Larger test sets are required for enterprise deployment decisions.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--primary);">2. Synthetic Benchmark Domain</h3>
+          <p style="font-size: 0.9rem; color: #475569; line-height: 1.5;">HaluEval perturbations (ChatGPT on Wikipedia) reflect specific synthetic patterns. Results may not fully transfer to conversational or creative tasks.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-red);">3. Diagnostic Threshold Sample Reuse</h3>
+          <p style="font-size: 0.9rem; color: #475569; line-height: 1.5;">The 300 sample was evaluated under both Rule 1 and Rule 2. While tuning was on validation, Rule 2 on the 300 sample is diagnostic, not an isolated final test.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-purple);">4. Elliptical QA Hypotheses</h3>
+          <p style="font-size: 0.9rem; color: #475569; line-height: 1.5;">Short answers like <em>"Arthur's Magazine"</em> lack subject-verb grammar, causing NLI models to predict Neutral rather than Entailment, hurting accuracy.</p>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 13: Future Architecture -->
+    <div class="slide" data-notes="For production systems, we propose a 4-stage hybrid architecture: split responses into atomic claims, retrieve multi-source evidence, run domain-fine-tuned NLI, and use calibrated triage with human review.">
+      <div class="category-badge">Future Roadmap • Production Design</div>
+      <h2 class="slide-title">Enterprise Architecture: Hybrid 4-Stage Pipeline</h2>
+      <div style="display: flex; flex-direction: column; gap: 12px; flex: 1;">
+        <div class="card" style="padding: 14px 20px;">
+          <h3 style="color: var(--primary); font-size: 1.05rem;">Stage 1: Atomic Claim Extraction</h3>
+          <p style="font-size: 0.88rem; color: #475569;">Decompose complex generative paragraphs into discrete, verifiable factual propositions.</p>
+        </div>
+        <div class="card" style="padding: 14px 20px;">
+          <h3 style="color: var(--accent-green); font-size: 1.05rem;">Stage 2: Multi-Source Evidence Retrieval</h3>
+          <p style="font-size: 0.88rem; color: #475569;">Fetch live grounding text from internal vector databases, trusted knowledge graphs, and authoritative APIs.</p>
+        </div>
+        <div class="card" style="padding: 14px 20px;">
+          <h3 style="color: var(--accent-purple); font-size: 1.05rem;">Stage 3: Task-Fine-Tuned Cross-Encoder NLI</h3>
+          <p style="font-size: 0.88rem; color: #475569;">Evaluate atomic claims against retrieved evidence using cross-encoders fine-tuned specifically on QA pairs.</p>
+        </div>
+        <div class="card" style="padding: 14px 20px;">
+          <h3 style="color: var(--accent-amber); font-size: 1.05rem;">Stage 4: Calibrated Risk Triage & Human-in-the-Loop</h3>
+          <p style="font-size: 0.88rem; color: #475569;">Pass high-confidence answers automatically; route ambiguous borderline cases to human domain experts.</p>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 14: Conclusion -->
+    <div class="slide dark-theme" data-notes="To conclude: Hallucination detection is an engineering trade-off problem. TF-IDF is fast but superficial. NLI is semantically grounded and catches more errors, but requires careful threshold calibration to avoid crippling usability.">
+      <div class="category-badge">Summary & Conclusions</div>
+      <h2 class="slide-title" style="margin-bottom: 20px;">Key Takeaways for AI Engineers</h2>
+      <div style="display: flex; flex-direction: column; gap: 14px; flex: 1;">
+        <div class="card" style="padding: 16px 22px;">
+          <h3 style="color: var(--primary); font-size: 1.1rem;">1. Leakage-Resistant Evaluation is Non-Negotiable</h3>
+          <p style="font-size: 0.92rem; color: #cbd5e1;">Random answer splitting causes severe topical data leakage. Splitting by original question IDs is mandatory.</p>
+        </div>
+        <div class="card" style="padding: 16px 22px;">
+          <h3 style="color: var(--accent-green); font-size: 1.1rem;">2. Lexical Baselines are Strong but Surface-Level</h3>
+          <p style="font-size: 0.92rem; color: #cbd5e1;">TF-IDF achieved 70.57% test accuracy by capturing benchmark artifacts, but missed over 40% of hallucinations.</p>
+        </div>
+        <div class="card" style="padding: 16px 22px;">
+          <h3 style="color: var(--accent-purple); font-size: 1.1rem;">3. Deep NLI Catches More Errors (+20.7% Recall)</h3>
+          <p style="font-size: 0.92rem; color: #cbd5e1;">Cross-encoders evaluate factual evidence directly, acting as a much stronger safety net in critical domains.</p>
+        </div>
+        <div class="card" style="padding: 16px 22px;">
+          <h3 style="color: var(--accent-red); font-size: 1.1rem;">4. The False-Positive Penalty Must Be Measured</h3>
+          <p style="font-size: 0.92rem; color: #cbd5e1;">Optimizing recall in isolation can yield a 95% false alarm rate. Real-world systems must balance safety against usability.</p>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+    <!-- SLIDE 15: Q&A -->
+    <div class="slide" data-notes="Thank you so much for your time. Prachi and I are now ready to answer any questions from the panel.">
+      <div class="category-badge">Wrap-up & Discussion</div>
+      <h2 class="slide-title">Thank You! Questions & Discussion</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="color: var(--primary);">Q: Why question-level split?</h3>
+          <p style="font-size: 0.9rem; color: #475569; line-height: 1.5;">To prevent identical question entities from appearing in train and test, stopping models from cheating via topical memorization.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-purple);">Q: Why did TF-IDF beat NLI in accuracy?</h3>
+          <p style="font-size: 0.9rem; color: #475569; line-height: 1.5;">TF-IDF was trained directly on 14k in-domain answers; NLI was zero-shot and penalized on short noun phrases.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-red);">Q: What does tau = 0.95 show?</h3>
+          <p style="font-size: 0.9rem; color: #475569; line-height: 1.5;">Extreme recall (84.7%) causes an unbearable false-positive penalty (95.3%), rejecting 143 of 150 valid answers.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-green);">Q: Why bootstrap CIs?</h3>
+          <p style="font-size: 0.9rem; color: #475569; line-height: 1.5;">To quantify error margins (±5.7% on 300 sample vs ±1.4% on 4k), ensuring claims of superiority are statistically sound.</p>
+        </div>
+      </div>
+      <div class="speaker-notes"></div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Navigation -->
+  <div id="nav">
+    <div>
+      <button class="nav-btn" id="prev-btn">◀ Previous</button>
+      <button class="nav-btn" id="next-btn" style="margin-left: 8px;">Next ▶</button>
+      <button class="nav-btn" id="notes-btn" style="margin-left: 8px; background: #334155;">Toggle Notes [N]</button>
+    </div>
+    <div style="font-weight: 600; color: white;">
+      Slide <span id="current-slide">1</span> of <span id="total-slides">15</span>
+    </div>
+    <div class="shortcuts-hint">
+      Shortcuts: <strong>← / →</strong> or <strong>Space</strong> to navigate | <strong>F</strong> for Fullscreen | <strong>N</strong> for Notes
+    </div>
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const notesBtn = document.getElementById('notes-btn');
+    const currentSlideSpan = document.getElementById('current-slide');
+    const totalSlidesSpan = document.getElementById('total-slides');
+
+    let currentIdx = 0;
+    let showNotes = false;
+    totalSlidesSpan.textContent = slides.length;
+
+    function updateSlide(newIdx) {
+      if (newIdx < 0 || newIdx >= slides.length) return;
+      slides[currentIdx].classList.remove('active');
+      currentIdx = newIdx;
+      slides[currentIdx].classList.add('active');
+      currentSlideSpan.textContent = currentIdx + 1;
+
+      // Update speaker notes
+      const notesBox = slides[currentIdx].querySelector('.speaker-notes');
+      if (notesBox) {
+        const noteText = slides[currentIdx].getAttribute('data-notes') || 'No notes for this slide.';
+        notesBox.innerHTML = `<strong>🎙️ Presenter Script (What to say):</strong> ${noteText}`;
+        notesBox.style.display = showNotes ? 'block' : 'none';
+      }
+    }
+
+    prevBtn.addEventListener('click', () => updateSlide(currentIdx - 1));
+    nextBtn.addEventListener('click', () => updateSlide(currentIdx + 1));
+
+    notesBtn.addEventListener('click', () => {
+      showNotes = !showNotes;
+      const notesBox = slides[currentIdx].querySelector('.speaker-notes');
+      if (notesBox) notesBox.style.display = showNotes ? 'block' : 'none';
+      notesBtn.style.background = showNotes ? 'var(--accent-amber)' : '#334155';
+    });
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        updateSlide(currentIdx + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        updateSlide(currentIdx - 1);
+      } else if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      } else if (e.key === 'n' || e.key === 'N' || e.key === 's' || e.key === 'S') {
+        notesBtn.click();
+      }
+    });
+
+    // Initialize first slide notes
+    updateSlide(0);
+  </script>
+</body>
+</html>
+"""
+
+output_paths = [
+    "/Users/aditi/Downloads/presentation.html",
+    "/Users/aditi/Desktop/presentation.html",
+    "/Users/aditi/.gemini/antigravity/scratch/hallucination-detection-study/presentation.html"
+]
+
+for p in output_paths:
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print(f"Generated HTML presentation at: {p}")
